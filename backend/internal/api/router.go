@@ -16,6 +16,7 @@ import (
 	"libax/internal/auth"
 	"libax/internal/catalogue"
 	"libax/internal/domain"
+	"libax/internal/health"
 	"libax/internal/lookup"
 	"libax/internal/store"
 )
@@ -36,6 +37,19 @@ type Deps struct {
 	Cover          lookup.CoverReader
 	LookupLimit    int // ISBN lookups per user per day
 	CoverScanLimit int // cover scans per user per day
+
+	// Health lists the dependencies the admin status page reports on; Info describes the environment.
+	Health []health.Service
+	Info   SystemInfo
+}
+
+// SystemInfo is the non-secret description of how this server is configured.
+type SystemInfo struct {
+	Env             string `json:"env"`
+	AuthMode        string `json:"authMode"`
+	CatalogueSource string `json:"catalogueSource"`
+	BookLookup      string `json:"bookLookup"`
+	Submissions     bool   `json:"submissions"`
 }
 
 type server struct {
@@ -52,13 +66,17 @@ type server struct {
 	cover        lookup.CoverReader
 	isbnLimiter  *lookup.Limiter
 	coverLimiter *lookup.Limiter
+
+	health []health.Service
+	info   SystemInfo
 }
 
 func NewRouter(d Deps) http.Handler {
 	s := &server{store: d.Store, cat: d.Catalogue, authMode: d.AuthMode, log: d.Log, pub: d.Publisher, pubLimit: d.SubmissionLimit,
 		isbn: d.ISBN, cover: d.Cover,
 		isbnLimiter:  &lookup.Limiter{Max: max(d.LookupLimit, 1), Window: 24 * time.Hour},
-		coverLimiter: &lookup.Limiter{Max: max(d.CoverScanLimit, 1), Window: 24 * time.Hour}}
+		coverLimiter: &lookup.Limiter{Max: max(d.CoverScanLimit, 1), Window: 24 * time.Hour},
+		health:       d.Health, info: d.Info}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID, middleware.Recoverer, requestLog(d.Log), middleware.Timeout(20*time.Second))
 
@@ -86,6 +104,16 @@ func NewRouter(d Deps) http.Handler {
 		r.Get("/my/library/{bookId}", s.getLibraryEntry)
 		r.Patch("/my/library/{bookId}", s.updateLibraryEntry)
 		r.Delete("/my/library/{bookId}", s.removeFromLibrary)
+
+		r.Route("/admin", func(r chi.Router) {
+			r.Use(requireAdmin)
+			r.Get("/members", s.adminListMembers)
+			r.Patch("/members/{id}", s.adminUpdateMember)
+			r.Get("/system", s.adminSystem)
+			r.Get("/audit", s.adminAudit)
+			r.Get("/catalogue", s.adminCatalogue)
+			r.Patch("/catalogue/{bookId}", s.adminSetBookHidden)
+		})
 
 		r.Get("/lookup/isbn/{isbn}", s.lookupISBN)
 		r.Post("/lookup/cover", s.lookupCover)
@@ -146,7 +174,7 @@ func (s *server) me(w http.ResponseWriter, r *http.Request) {
 		AuthMode   string   `json:"authMode"`
 		CanAddBook bool     `json:"canAddBooks"`
 		Features   features `json:"features"`
-	}{store.User{ID: u.ID, Email: u.Email, Name: u.Name}, s.authMode, s.pub != nil, features{s.isbn != nil, s.cover != nil}})
+	}{store.User{ID: u.ID, Email: u.Email, Name: u.Name, Role: u.Role, Status: u.Status}, s.authMode, s.pub != nil, features{s.isbn != nil, s.cover != nil}})
 }
 
 func (s *server) listBooks(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +184,18 @@ func (s *server) listBooks(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "catalogue_unavailable", "the catalogue is temporarily unavailable", "")
 		return
 	}
-	writeJSON(w, http.StatusOK, books)
+	hidden, err := s.store.HiddenBookIDs(r.Context())
+	if err != nil {
+		fail(w, s.log, err)
+		return
+	}
+	visible := make([]catalogue.Book, 0, len(books))
+	for _, b := range books {
+		if !hidden[b.ID] {
+			visible = append(visible, b)
+		}
+	}
+	writeJSON(w, http.StatusOK, visible)
 }
 
 func (s *server) getBook(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +205,7 @@ func (s *server) getBook(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "catalogue_unavailable", "the catalogue is temporarily unavailable", "")
 		return
 	}
-	if !ok {
+	if !ok || s.isHidden(r, b.ID) {
 		fail(w, s.log, store.ErrNotFound)
 		return
 	}
@@ -224,7 +263,7 @@ func (s *server) addToLibrary(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "catalogue_unavailable", "the catalogue is temporarily unavailable", "")
 		return
 	}
-	if !found {
+	if !found || s.isHidden(r, req.BookID) {
 		writeError(w, http.StatusNotFound, "book_not_in_catalogue", "that book is not in the catalogue", "bookId")
 		return
 	}
@@ -373,4 +412,15 @@ func (s *server) removeCollectionBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// isHidden reports whether an administrator has hidden the book from members. On a lookup error it answers false:
+// moderation is a convenience layer, and a database blip must not make the whole catalogue unusable.
+func (s *server) isHidden(r *http.Request, bookID string) bool {
+	hidden, err := s.store.HiddenBookIDs(r.Context())
+	if err != nil {
+		s.log.Error("hidden-book lookup failed", "error", err)
+		return false
+	}
+	return hidden[bookID]
 }

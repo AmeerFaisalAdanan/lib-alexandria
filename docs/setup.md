@@ -16,6 +16,9 @@ Optional column: `added_by` (the app fills in who published the book).
 - **Cover photo → details** needs an Anthropic API key: set `ANTHROPIC_API_KEY` (the photo is sent to Anthropic to be read; set `COVER_SCAN=off` to forbid it). `COVER_SCAN_MODEL` defaults to `claude-opus-5-5`; a cheaper model also reads covers.
 - The live camera needs HTTPS (the Cloudflare hostname is fine) or `localhost`.
 
+## 1c. Administrators
+Set `ADMIN_EMAILS` to the e-mail(s) of the first administrator(s) (comma-separated). The first of them to sign in while the database has no active administrator becomes one; after that, manage roles in the app under **Settings → Administration → Members**. The list is also your way back in if every administrator is ever disabled. It never overrides a demotion while an administrator exists.
+
 ## 2. Cloudflare Access
 1. Zero Trust → Access → Applications → add a **Self-hosted** application for the hostname that serves this app (via Cloudflare Tunnel → `http://<host>:8080`). Add your allow policy (who may sign in).
 2. Copy the application's **Audience (AUD) tag** and your team domain (`<team>.cloudflareaccess.com`).

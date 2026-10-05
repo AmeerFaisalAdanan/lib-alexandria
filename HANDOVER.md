@@ -8,6 +8,9 @@ Since the first MVP, three features were added at the owner's request: **members
 
 Read `docs/architecture.md` (design and decisions) and `docs/setup.md` (what needs your Google/Cloudflare accounts). The earlier handover described a single-user localStorage prototype with `owner: Alep | Taqim`; that model is gone.
 
+## Administration (added after the MVP)
+Roles (`member`/`admin`) and status (`active`/`disabled`) live on `users`; `requireAdmin` reads them from the database on every request. First administrator = `ADMIN_EMAILS` (only while no active admin exists). Settings → Administration (admins only) has Members, Catalogue (hide/show, data-quality flags) and System (safe service status + audit trail). Secrets are never stored in the database or shown in the UI. Last-admin protection, audit events and the disabled-account lockout are enforced and tested server-side. See `docs/architecture.md` → Administration. Deferred: editing/permanently removing catalogue records from the app, audit filtering and export, per-member activity.
+
 ## Layout
 ```
 backend/                Go API (cmd/server, internal/{config,domain,catalogue,store,auth,api}, migrations, fixtures)
@@ -23,7 +26,7 @@ scripts/                go.sh, npm.sh, test-backend.sh, test-e2e.sh (no Go/Node 
 ## Commands
 `scripts/test-backend.sh` · `scripts/npm.sh run lint|typecheck|test|build` · `docker compose up -d --build` · `scripts/test-e2e.sh`
 
-Local `.env` for the dev stack: `APP_ENV=development AUTH_MODE=dev CATALOGUE_SOURCE=fixture BOOK_LOOKUP=fixture COVER_SCAN=fixture` (all refused when `APP_ENV=production`).
+Local `.env` for the dev stack: `APP_ENV=development AUTH_MODE=dev CATALOGUE_SOURCE=fixture BOOK_LOOKUP=fixture COVER_SCAN=fixture ADMIN_EMAILS=admin@example.test` (the first four are refused when `APP_ENV=production`). The admin E2E tests sign in as `admin@example.test`; run E2E with `BOOK_LOOKUP=fixture` (the scan tests need the canned lookups).
 
 ## State of play (verified 2026-10-05)
 - **Go tests pass**: domain, config guards, Cloudflare JWT (forged / expired / alg-confusion), Sheets read **and append** (header-aware, RAW values), cache, publishing (duplicates, validation, rate limit), copies and loans (permissions, one active loan, price privacy, DB constraints), ISBN lookup (checksum, provider merge, cache, failure handling), the cover reader against a fake Messages API (image block, schema, effort, refusal), endpoint limits, and cross-user isolation. Mutation-checked: removing the user filter from a query makes the isolation tests fail.

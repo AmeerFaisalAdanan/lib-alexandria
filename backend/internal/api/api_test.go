@@ -84,10 +84,7 @@ func newEnvWith(t *testing.T, cat catalogue.Repository, pub catalogue.Publisher,
 	}
 	dev, _ := auth.NewDev("test", "")
 	log := slog.New(slog.DiscardHandler)
-	provision := func(ctx context.Context, id auth.Identity) (auth.User, error) {
-		u, err := db.UpsertUser(ctx, id.Subject, id.Email, id.Name)
-		return auth.User{ID: u.ID, Email: u.Email, Name: u.Name}, err
-	}
+	provision := api.Provisioner(db)
 	deps := api.Deps{
 		Store: db, Catalogue: cat, Log: log, Auth: auth.Middleware(dev, provision, log), AuthMode: "dev",
 		Publisher: pub, SubmissionLimit: limit,

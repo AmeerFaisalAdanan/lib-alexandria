@@ -50,6 +50,8 @@ func fail(w http.ResponseWriter, log *slog.Logger, err error) {
 		writeError(w, http.StatusNotFound, "not_found", "not found", "")
 	case errors.Is(err, store.ErrBookNotInLibrary):
 		writeError(w, http.StatusNotFound, "book_not_in_library", err.Error(), "")
+	case errors.Is(err, store.ErrLastAdmin):
+		writeError(w, http.StatusConflict, "last_admin", "there must always be at least one active administrator", "")
 	case errors.Is(err, store.ErrForbidden):
 		writeError(w, http.StatusForbidden, "forbidden", "you are not allowed to do that", "")
 	case errors.Is(err, store.ErrOnLoan):

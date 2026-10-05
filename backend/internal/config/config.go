@@ -56,6 +56,9 @@ type Config struct {
 	CoverScanModel   string
 	CoverLimitPerDay int
 
+	// AdminEmails may become the first administrator while the database has none (see store.UpsertUser).
+	AdminEmails []string
+
 	// GoogleBooksAPIKey is optional; without it the Google Books quota is shared and often exhausted.
 	GoogleBooksAPIKey string
 }
@@ -89,6 +92,11 @@ func Load() (Config, error) {
 	c.BookLookup = getenv("BOOK_LOOKUP", "online")
 	c.CoverScan = getenv("COVER_SCAN", "auto")
 	c.AnthropicAPIKey = os.Getenv("ANTHROPIC_API_KEY")
+	for _, e := range strings.Split(os.Getenv("ADMIN_EMAILS"), ",") {
+		if e = strings.ToLower(strings.TrimSpace(e)); e != "" {
+			c.AdminEmails = append(c.AdminEmails, e)
+		}
+	}
 	c.GoogleBooksAPIKey = os.Getenv("GOOGLE_BOOKS_API_KEY")
 	c.CoverScanModel = getenv("COVER_SCAN_MODEL", "claude-opus-5-5")
 	for key, dst := range map[string]*int{"LOOKUP_LIMIT_PER_DAY": &c.LookupLimitPerDay, "COVER_LIMIT_PER_DAY": &c.CoverLimitPerDay} {
@@ -160,6 +168,12 @@ func (c Config) Validate() error {
 		}
 	default:
 		add("CATALOGUE_SOURCE must be sheets or fixture (got %q)", c.CatalogueSource)
+	}
+
+	for _, e := range c.AdminEmails {
+		if !strings.Contains(e, "@") {
+			add("ADMIN_EMAILS contains %q, which is not an e-mail address", e)
+		}
 	}
 
 	switch c.BookLookup {

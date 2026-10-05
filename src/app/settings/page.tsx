@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { LogOut, TriangleAlert } from 'lucide-react';
+import Link from 'next/link';
+import { Activity, ChevronRight, LibraryBig, LogOut, TriangleAlert, Users } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LanguageToggle } from '@/components/app-shell/language-toggle';
@@ -79,6 +80,38 @@ function Settings() {
               {t.settings.signOut}
             </a>
           )}
+        </section>
+      )}
+
+      {/* Only administrators see this. It is a convenience: the pages and every /api/admin route check the role on the server. */}
+      {me?.role === 'admin' && (
+        <section aria-labelledby="admin-heading" className="space-y-3 rounded-2xl border border-border bg-card p-5 md:p-6">
+          <div>
+            <h2 id="admin-heading" className="font-bold text-white">
+              {t.settings.adminTitle}
+            </h2>
+            <p className="text-sm text-muted-foreground">{t.admin.subtitle}</p>
+          </div>
+          <ul className="space-y-2">
+            {(
+              [
+                ['/settings/members', Users, t.admin.members, t.admin.membersDesc],
+                ['/settings/catalogue', LibraryBig, t.admin.catalogue, t.admin.catalogueDesc],
+                ['/settings/system', Activity, t.admin.system, t.admin.systemDesc],
+              ] as const
+            ).map(([href, Icon, title, desc]) => (
+              <li key={href}>
+                <Link href={href} className="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-background/60 px-3 py-2 transition hover:bg-secondary/60">
+                  <Icon className="size-5 shrink-0 text-accent-foreground" aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{title}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{desc}</span>
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

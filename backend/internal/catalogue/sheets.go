@@ -226,3 +226,27 @@ func (s SheetsSource) getValues(ctx context.Context, base, rangeA1 string) ([][]
 	}
 	return payload.Values, nil
 }
+
+// Ping checks that the sheet exists and the service account can read it, using a metadata-only request.
+// It never writes and does not transfer any rows.
+func (s SheetsSource) Ping(ctx context.Context) error {
+	base := s.BaseURL
+	if base == "" {
+		base = SheetsBaseURL
+	}
+	u := fmt.Sprintf("%s/v4/spreadsheets/%s?fields=spreadsheetId", base, url.PathEscape(s.SpreadsheetID))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := s.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("sheets status %d", resp.StatusCode)
+	}
+	return nil
+}

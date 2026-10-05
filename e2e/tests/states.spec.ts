@@ -56,6 +56,7 @@ test('a failed save reverts the change and tells the user', async ({ browser }) 
   await addFromCatalogue(s.page, TITLE);
   await s.page.goto('/library');
   await s.page.getByRole('link', { name: new RegExp(TITLE) }).click();
+  await s.page.waitForURL(/\/library\/(?!add)[^/]+$/);
   await expect(s.page.getByRole('button', { name: 'Want to Read' })).toHaveAttribute('aria-pressed', 'true');
 
   await s.page.route('**/api/my/library/*', (r, req) =>

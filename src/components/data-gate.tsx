@@ -12,8 +12,8 @@ function LoadError() {
   const error = useLibraryStore((s) => s.error);
   const load = useLibraryStore((s) => s.load);
 
-  const kind = error?.isUnauthorized ? 'unauthorized' : error?.isForbidden ? 'forbidden' : error?.isNetwork ? 'network' : 'generic';
-  const Icon = kind === 'unauthorized' || kind === 'forbidden' ? LockKeyhole : kind === 'network' ? CloudOff : TriangleAlert;
+  const kind = error?.isUnauthorized ? 'unauthorized' : error?.isDisabled ? 'disabled' : error?.isForbidden ? 'forbidden' : error?.isNetwork ? 'network' : 'generic';
+  const Icon = kind === 'unauthorized' || kind === 'forbidden' || kind === 'disabled' ? LockKeyhole : kind === 'network' ? CloudOff : TriangleAlert;
   const copy = t.state[kind];
 
   return (

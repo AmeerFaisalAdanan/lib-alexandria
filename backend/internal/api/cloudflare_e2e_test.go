@@ -40,10 +40,7 @@ func TestCloudflareTokenMapsToProvisionedUser(t *testing.T) {
 	defer db.Close()
 	log := slog.New(slog.DiscardHandler)
 	cf := auth.NewCloudflare(jwks.URL, "my-aud", jwks.Client())
-	provision := func(ctx context.Context, id auth.Identity) (auth.User, error) {
-		u, err := db.UpsertUser(ctx, id.Subject, id.Email, id.Name)
-		return auth.User{ID: u.ID, Email: u.Email, Name: u.Name}, err
-	}
+	provision := api.Provisioner(db)
 	srv := httptest.NewServer(api.NewRouter(api.Deps{Store: db, Catalogue: books, Log: log, Auth: auth.Middleware(cf, provision, log)}))
 	defer srv.Close()
 

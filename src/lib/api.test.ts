@@ -81,6 +81,40 @@ describe('api client', () => {
     expect(await api.readCover(new Blob(['x'], { type: 'image/png' })).catch((e) => e)).toMatchObject({ status: 422, code: 'unreadable' });
   });
 
+  it('admin endpoints: members, system, audit, catalogue moderation', async () => {
+    const fetchMock = respond(200, []);
+    vi.stubGlobal('fetch', fetchMock);
+    await api.admin.listMembers();
+    await api.admin.updateMember('m1', { role: 'admin' });
+    await api.admin.system();
+    await api.admin.audit(25);
+    await api.admin.catalogue();
+    await api.admin.setBookHidden('bk-1', true);
+    const calls = fetchMock.mock.calls.map(([url, init]) => `${init.method} ${url} ${init.body ?? ''}`);
+    expect(calls).toEqual([
+      'GET /api/admin/members ',
+      'PATCH /api/admin/members/m1 {"role":"admin"}',
+      'GET /api/admin/system ',
+      'GET /api/admin/audit?limit=25 ',
+      'GET /api/admin/catalogue ',
+      'PATCH /api/admin/catalogue/bk-1 {"hidden":true}',
+    ]);
+  });
+
+  it('never sends who is acting: the admin API takes only the change itself', async () => {
+    const fetchMock = respond(200, {});
+    vi.stubGlobal('fetch', fetchMock);
+    await api.admin.updateMember('m1', { status: 'disabled' });
+    expect(Object.keys(JSON.parse(fetchMock.mock.calls[0][1].body))).toEqual(['status']);
+  });
+
+  it('recognises a disabled account and a forbidden admin call', async () => {
+    vi.stubGlobal('fetch', respond(403, { error: { code: 'account_disabled', message: 'x' } }));
+    expect(await api.me().catch((e) => e)).toMatchObject({ isForbidden: true, isDisabled: true });
+    vi.stubGlobal('fetch', respond(403, { error: { code: 'forbidden', message: 'x' } }));
+    expect(await api.admin.listMembers().catch((e) => e)).toMatchObject({ isForbidden: true, isDisabled: false });
+  });
+
   it('maps API errors', async () => {
     vi.stubGlobal('fetch', respond(400, { error: { code: 'invalid_request', message: 'rating: must be from 1 to 5', field: 'rating' } }));
     const err = await api.updateEntry('b', { rating: 9 }).catch((e) => e);
