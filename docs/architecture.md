@@ -53,6 +53,27 @@ Status rules (`backend/internal/domain`, mirrored in `src/lib/library.ts`): want
 
 Other users' resources are always `404` (never `403`), so existence does not leak. Errors are `{ "error": { "code", "message", "field?" } }`.
 
+## Administration
+
+**Two different things, kept apart.** *Application administration* (who is a member, who is an administrator, who is disabled, which catalogue records are hidden, the audit trail) lives in PostgreSQL and is managed in the app. *Infrastructure secrets* (Google service account, `GOOGLE_BOOKS_API_KEY`, `ANTHROPIC_API_KEY`, `CF_ACCESS_*`, database passwords) stay in environment variables or Docker secrets and are **never** stored in the database or shown in the UI. The System page only reports `healthy`, `unavailable`, `configured`, `not_configured`.
+
+- **Roles and status**: `users.role` (`member`/`admin`) and `users.status` (`active`/`disabled`), enforced by CHECK constraints. The migration defaults everyone to `member`/`active`; nobody becomes an administrator by migration.
+- **Authorization is server-side and read from the database on every request.** The authenticated identity (Cloudflare JWT) resolves to a member; `requireAdmin` accepts only `role = admin AND status = active`. Nothing in a body, query string, cookie or client state can grant or claim a role. A disabled member is refused with `403 account_disabled` on every route, and logging in again does not re-enable anyone.
+- **Bootstrap** (`ADMIN_EMAILS`): an allow-listed e-mail, taken from the verified identity, becomes an administrator **only while the database has no active administrator**. It is an initial-setup and break-glass mechanism, not a standing override: once an admin exists, a demotion sticks and the list promotes nobody. Each bootstrap is audited (`admin.bootstrapped`).
+- **Last-admin protection**: the final active administrator can be neither demoted nor disabled (`409 last_admin`). The check runs in the same transaction as the change, with the active administrators locked, so two admins cannot remove each other at once.
+- **No deletion**: members are disabled, not deleted.
+- **Audit trail** (`audit_events`): written in the same transaction as the change it records, with the actor taken from the authenticated identity. Metadata holds identifiers, e-mails and before/after values only, never secrets.
+- **Catalogue moderation** is soft and reversible: an administrator can hide a record (`catalogue_hidden`). Members no longer see it and cannot newly add it to a library or record a copy; existing library entries and copies are untouched; the sheet is **never** modified. Admins also see data-quality flags (`missing_isbn`, `possible_duplicate`), who published each record, and reader and copy counts. Permanent removal and editing stay in the Google Sheet for now.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/admin/members` | All members with role and status |
+| PATCH | `/admin/members/{id}` | `{role?, status?}`; unknown fields rejected (the body can name neither the actor nor an identity) |
+| GET | `/admin/system` | Service status and non-secret environment; probes are cheap and read-only (Postgres ping, catalogue cache, sheet metadata, Cloudflare key set). Google Books and the cover scanner are reported as configured but never probed (quota and cost) |
+| GET | `/admin/audit?limit=` | Newest first, up to 200 |
+| GET | `/admin/catalogue` | Every record with issues, hidden flag, counts |
+| PATCH | `/admin/catalogue/{bookId}` | `{hidden: bool}` |
+
 ## Publishing a book
 
 Any signed-in member can add a book (`POST /api/books`). The backend validates and tidies the input, rejects duplicates (same ISBN, or same title and author ignoring case and spacing), generates a permanent id (`bk-` + 12 random characters; never reused), appends a row **at the bottom of the sheet under the right headers**, and updates its cache so everyone sees it immediately. Rows are written as plain values, so a title such as `=HYPERLINK(...)` can never run as a formula. Each member may publish 20 books per rolling day (`SUBMISSION_LIMIT_PER_DAY`); the author is recorded in `catalogue_submissions` (and in an optional `added_by` column in the sheet). Turn it off with `CATALOGUE_SUBMISSIONS=false`. This needs the Google service account to be an **Editor** of the sheet.
