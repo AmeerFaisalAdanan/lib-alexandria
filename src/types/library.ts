@@ -1,6 +1,11 @@
-export type ReadingStatus = 'want_to_read' | 'reading' | 'completed';
-export type BookLanguage = 'English' | 'Bahasa Melayu';
-export type BookOwner = 'Alep' | 'Taqim';
+export const READING_STATUSES = ['want_to_read', 'reading', 'completed'] as const;
+export type ReadingStatus = (typeof READING_STATUSES)[number];
+
+export const BOOK_LANGUAGES = ['English', 'Bahasa Melayu'] as const;
+export type BookLanguage = (typeof BOOK_LANGUAGES)[number];
+
+export const OWNERS = ['Alep', 'Taqim'] as const;
+export type BookOwner = (typeof OWNERS)[number];
 
 export interface Book {
   id: string;
@@ -14,21 +19,28 @@ export interface Book {
   owner: BookOwner;
   location: string;
   status: ReadingStatus;
-  progress: number; // 0 to 100
-  rating?: number; // 1 to 5
-  price?: number; // in RM
+  /** 0–100 */
+  progress: number;
+  /** 1–5, undefined = not rated */
+  rating?: number;
+  /** RM */
+  price?: number;
+  /** YYYY-MM-DD */
   purchaseDate?: string;
   notes?: string;
   tags: string[];
-  collectionId?: string;
+  collectionIds: string[];
+  /** ISO timestamp */
   addedAt: string;
 }
+
+export type CollectionColor = 'amber' | 'emerald' | 'purple' | 'blue' | 'rose';
 
 export interface Collection {
   id: string;
   name: string;
   description?: string;
-  color?: string;
+  color: CollectionColor;
 }
 
 export interface Category {
