@@ -2,5 +2,14 @@ node_modules
 .next
 .git
 npm-debug.log*
-.env*
+.env
+.env.*
+!.env.example
 design
+backend
+e2e
+test-results
+playwright-report
+docs
+scripts
+.secrets

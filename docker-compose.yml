@@ -1,12 +1,77 @@
+# Library of Alexandria: web (Next.js) -> api (Go) -> db (PostgreSQL).
+# Only `web` is published; Cloudflare Access / the tunnel should point at it. Copy .env.example to .env first.
 services:
-  lib-ax:
-    build: .
+  db:
+    image: postgres:17-alpine
+    container_name: lib-ax-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: libax
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: libax
+    volumes:
+      - lib-ax-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U libax -d libax"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    container_name: lib-ax-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      ADDR: ":8081"
+      DATABASE_URL: postgres://libax:${POSTGRES_PASSWORD}@db:5432/libax?sslmode=disable
+      AUTH_MODE: ${AUTH_MODE:-cloudflare}
+      CF_ACCESS_TEAM_DOMAIN: ${CF_ACCESS_TEAM_DOMAIN:-}
+      CF_ACCESS_AUD: ${CF_ACCESS_AUD:-}
+      DEV_USER_EMAIL: ${DEV_USER_EMAIL:-dev@example.test}
+      CATALOGUE_SOURCE: ${CATALOGUE_SOURCE:-sheets}
+      SHEETS_SPREADSHEET_ID: ${SHEETS_SPREADSHEET_ID:-}
+      SHEETS_RANGE: ${SHEETS_RANGE:-Catalogue!A:H}
+      GOOGLE_CREDENTIALS_FILE: ${GOOGLE_CREDENTIALS_FILE:-}
+      CATALOGUE_TTL: ${CATALOGUE_TTL:-5m}
+      CATALOGUE_SUBMISSIONS: ${CATALOGUE_SUBMISSIONS:-true}
+      SUBMISSION_LIMIT_PER_DAY: ${SUBMISSION_LIMIT_PER_DAY:-20}
+      BOOK_LOOKUP: ${BOOK_LOOKUP:-online}
+      GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      COVER_SCAN: ${COVER_SCAN:-auto}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      COVER_SCAN_MODEL: ${COVER_SCAN_MODEL:-claude-opus-5-5}
+      LOOKUP_LIMIT_PER_DAY: ${LOOKUP_LIMIT_PER_DAY:-300}
+      COVER_LIMIT_PER_DAY: ${COVER_LIMIT_PER_DAY:-30}
+    volumes:
+      # Service-account key, mounted read-only into the api container only (never the web image).
+      - ${GOOGLE_CREDENTIALS_HOST_PATH:-./.secrets/none}:/run/secrets/google.json:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8081/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      args:
+        API_ORIGIN: http://api:8081
     container_name: lib-ax-app
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
     ports:
       - "8080:3000"
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+volumes:
+  lib-ax-pgdata:
