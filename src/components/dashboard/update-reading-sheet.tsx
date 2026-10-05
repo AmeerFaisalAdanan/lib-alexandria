@@ -9,12 +9,12 @@ import { EmptyState } from '@/components/page';
 import { useT } from '@/i18n';
 import { currentlyReading } from '@/lib/library';
 import { cn } from '@/lib/utils';
-import { useLibraryStore } from '@/store/library-store';
+import { useLibraryBooks } from '@/store/library-store';
 
 /** Dashboard quick action: update progress for every book in progress, without leaving the page. */
 export function UpdateReadingSheet() {
   const { t } = useT();
-  const books = useLibraryStore((s) => s.books);
+  const books = useLibraryBooks();
   const reading = currentlyReading(books);
 
   return (

@@ -12,13 +12,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { collectionDot } from '@/components/collections/collection-color';
 import { useT } from '@/i18n';
+import { useAction } from '@/lib/use-action';
 import { cn } from '@/lib/utils';
 import { useLibraryStore } from '@/store/library-store';
-import type { Book } from '@/types/library';
+import type { LibraryBook } from '@/types/library';
 
 /** Shows which collections a book is in, with add/remove. */
-export function BookCollections({ book }: { book: Book }) {
+export function BookCollections({ book }: { book: LibraryBook }) {
   const { t } = useT();
+  const run = useAction();
   const collections = useLibraryStore((s) => s.collections);
   const addBookToCollection = useLibraryStore((s) => s.addBookToCollection);
   const removeBookFromCollection = useLibraryStore((s) => s.removeBookFromCollection);
@@ -41,10 +43,12 @@ export function BookCollections({ book }: { book: Book }) {
               <button
                 type="button"
                 aria-label={t.collections.removeBook(book.title)}
-                onClick={() => {
-                  removeBookFromCollection(book.id, c.id);
-                  toast(t.toast.removedFromCollection(c.name));
-                }}
+                onClick={() =>
+                  void run(
+                    () => removeBookFromCollection(book.id, c.id),
+                    () => toast(t.toast.removedFromCollection(c.name)),
+                  )
+                }
                 className="mr-0.5 flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
               >
                 <X className="size-3.5" aria-hidden />
@@ -64,10 +68,12 @@ export function BookCollections({ book }: { book: Book }) {
               <DropdownMenuItem
                 key={c.id}
                 className="min-h-10"
-                onClick={() => {
-                  addBookToCollection(book.id, c.id);
-                  toast.success(t.toast.addedToCollection(c.name));
-                }}
+                onClick={() =>
+                  void run(
+                    () => addBookToCollection(book.id, c.id),
+                    () => toast.success(t.toast.addedToCollection(c.name)),
+                  )
+                }
               >
                 <span aria-hidden className={cn('size-2 rounded-full', collectionDot[c.color])} />
                 {c.name}

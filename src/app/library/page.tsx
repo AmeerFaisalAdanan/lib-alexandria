@@ -6,24 +6,25 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { BookCard } from '@/components/books/book-card';
-import { OwnerBadge, StatusBadge } from '@/components/books/badges';
+import { LanguageBadge, StatusBadge } from '@/components/books/badges';
+import { DataGate } from '@/components/data-gate';
 import { LibraryToolbar } from '@/components/library/library-filters';
 import { EmptyState, PageContainer, PageHeader, PageSkeleton } from '@/components/page';
-import { useHydrated } from '@/components/store-hydrator';
 import { useT } from '@/i18n';
 import {
   DEFAULT_FILTERS,
   filterAndSortBooks,
   filtersFromSearchParams,
+  distinct,
   filtersToSearchParams,
   type LibraryFilters,
 } from '@/lib/library';
 import { cn } from '@/lib/utils';
-import { useLibraryStore } from '@/store/library-store';
+import { useLibraryBooks } from '@/store/library-store';
 import { usePreferencesStore } from '@/store/preferences-store';
-import type { Book } from '@/types/library';
+import type { LibraryBook } from '@/types/library';
 
-function BookTable({ books }: { books: Book[] }) {
+function BookTable({ books }: { books: LibraryBook[] }) {
   const { t } = useT();
   const c = t.library.column;
   return (
@@ -34,7 +35,7 @@ function BookTable({ books }: { books: Book[] }) {
             <th className="w-[34%] px-5 py-3">{c.title}</th>
             <th className="w-[22%] px-5 py-3">{c.author}</th>
             <th className="w-[18%] px-5 py-3">{c.category}</th>
-            <th className="w-[10%] px-5 py-3">{c.owner}</th>
+            <th className="w-[12%] px-5 py-3">{c.language}</th>
             <th className="w-[16%] px-5 py-3">{c.status}</th>
           </tr>
         </thead>
@@ -42,14 +43,14 @@ function BookTable({ books }: { books: Book[] }) {
           {books.map((b) => (
             <tr key={b.id} className="transition hover:bg-secondary/40">
               <td className="truncate px-5 py-3.5 font-bold">
-                <Link href={`/library/${b.id}`} className="hover:text-accent-foreground">
+                <Link href={`/library/${encodeURIComponent(b.id)}`} className="hover:text-accent-foreground">
                   {b.title}
                 </Link>
               </td>
               <td className="truncate px-5 py-3.5 text-muted-foreground">{b.author}</td>
               <td className="truncate px-5 py-3.5 text-muted-foreground">{b.category}</td>
               <td className="px-5 py-3.5">
-                <OwnerBadge owner={b.owner} />
+                <LanguageBadge language={b.language} />
               </td>
               <td className="px-5 py-3.5">
                 <StatusBadge status={b.status} progress={b.progress} />
@@ -66,8 +67,9 @@ function LibraryView() {
   const { t } = useT();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const books = useLibraryStore((s) => s.books);
-  const categories = useLibraryStore((s) => s.categories);
+  const books = useLibraryBooks();
+  const categories = useMemo(() => distinct(books.map((b) => b.category)), [books]);
+  const languages = useMemo(() => distinct(books.map((b) => b.language)), [books]);
   const view = usePreferencesStore((s) => s.libraryView);
 
   const filters = useMemo(() => filtersFromSearchParams(new URLSearchParams(searchParams.toString())), [searchParams]);
@@ -114,6 +116,7 @@ function LibraryView() {
           <LibraryToolbar
             filters={filters}
             categories={categories}
+            languages={languages}
             // Typing replaces history; discrete filter changes push so Back undoes them.
             onChange={(patch) => setFilters({ ...filters, ...patch }, 'q' in patch && Object.keys(patch).length === 1 ? 'replace' : 'push')}
             onReset={() => setFilters(DEFAULT_FILTERS, 'push')}
@@ -146,7 +149,7 @@ function LibraryView() {
   );
 }
 
-function BookGrid({ books, className }: { books: Book[]; className?: string }) {
+function BookGrid({ books, className }: { books: LibraryBook[]; className?: string }) {
   return (
     <ul className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-5 xl:grid-cols-3', className)}>
       {books.map((b) => (
@@ -159,11 +162,11 @@ function BookGrid({ books, className }: { books: Book[]; className?: string }) {
 }
 
 export default function LibraryPage() {
-  const hydrated = useHydrated();
-  if (!hydrated) return <PageSkeleton />;
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <LibraryView />
-    </Suspense>
+    <DataGate>
+      <Suspense fallback={<PageSkeleton />}>
+        <LibraryView />
+      </Suspense>
+    </DataGate>
   );
 }

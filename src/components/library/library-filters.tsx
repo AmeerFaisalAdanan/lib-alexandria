@@ -14,27 +14,24 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { OptionSelect, type Option } from '@/components/option-select';
-import { useT, type Dictionary } from '@/i18n';
+import { bookLanguageLabel, useT, type Dictionary } from '@/i18n';
 import { countActiveFilters, DEFAULT_FILTERS, SORT_KEYS, type LibraryFilters } from '@/lib/library';
 import { cn } from '@/lib/utils';
 import { usePreferencesStore } from '@/store/preferences-store';
-import { BOOK_LANGUAGES, OWNERS, READING_STATUSES, type Category } from '@/types/library';
+import { READING_STATUSES } from '@/types/library';
 
 type Patch = (patch: Partial<LibraryFilters>) => void;
 
-function options(t: Dictionary, categories: Category[]) {
+function options(t: Dictionary, categories: string[], languages: string[]) {
   return {
     status: [{ value: 'all', label: t.library.allStatuses }, ...READING_STATUSES.map((s) => ({ value: s, label: t.status[s] }))] as Option<
       LibraryFilters['status']
     >[],
-    category: [{ value: 'all', label: t.library.allCategories }, ...categories.map((c) => ({ value: c.name, label: c.name }))],
+    category: [{ value: 'all', label: t.library.allCategories }, ...categories.map((c) => ({ value: c, label: c }))],
     language: [
       { value: 'all', label: t.library.allLanguages },
-      ...BOOK_LANGUAGES.map((l) => ({ value: l, label: t.bookLanguage[l] })),
+      ...languages.map((l) => ({ value: l, label: bookLanguageLabel(t, l) })),
     ] as Option<LibraryFilters['language']>[],
-    owner: [{ value: 'all', label: t.library.allOwners }, ...OWNERS.map((o) => ({ value: o, label: o }))] as Option<
-      LibraryFilters['owner']
-    >[],
     sort: SORT_KEYS.map((k) => ({ value: k, label: t.library.sort[k] })),
   };
 }
@@ -62,9 +59,9 @@ function StatusSegments({ value, onChange, className }: { value: LibraryFilters[
   );
 }
 
-function FilterFields({ filters, patch, categories }: { filters: LibraryFilters; patch: Patch; categories: Category[] }) {
+function FilterFields({ filters, patch, categories, languages }: { filters: LibraryFilters; patch: Patch; categories: string[]; languages: string[] }) {
   const { t } = useT();
-  const o = options(t, categories);
+  const o = options(t, categories, languages);
   return (
     <div className="space-y-5">
       <div className="space-y-2">
@@ -90,7 +87,6 @@ function FilterFields({ filters, patch, categories }: { filters: LibraryFilters;
         [
           ['category', t.library.category, o.category],
           ['language', t.library.language, o.language],
-          ['owner', t.library.owner, o.owner],
           ['sort', t.library.sortBy, o.sort],
         ] as const
       ).map(([key, label, opts]) => (
@@ -114,18 +110,19 @@ interface LibraryToolbarProps {
   filters: LibraryFilters;
   onChange: Patch;
   onReset: () => void;
-  categories: Category[];
+  categories: string[];
+  languages: string[];
   resultCount: (draft: LibraryFilters) => number;
 }
 
-export function LibraryToolbar({ filters, onChange, onReset, categories, resultCount }: LibraryToolbarProps) {
+export function LibraryToolbar({ filters, onChange, onReset, categories, languages, resultCount }: LibraryToolbarProps) {
   const { t } = useT();
   const view = usePreferencesStore((s) => s.libraryView);
   const setView = usePreferencesStore((s) => s.setLibraryView);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [draft, setDraft] = useState(filters);
   const active = countActiveFilters(filters);
-  const o = options(t, categories);
+  const o = options(t, categories, languages);
   const dirty = active > 0 || filters.q !== '' || filters.sort !== DEFAULT_FILTERS.sort;
 
   return (
@@ -167,7 +164,7 @@ export function LibraryToolbar({ filters, onChange, onReset, categories, resultC
               <DrawerTitle>{t.library.filters}</DrawerTitle>
             </DrawerHeader>
             <div className="overflow-y-auto px-4 pb-2">
-              <FilterFields filters={draft} patch={(p) => setDraft((d) => ({ ...d, ...p }))} categories={categories} />
+              <FilterFields filters={draft} patch={(p) => setDraft((d) => ({ ...d, ...p }))} categories={categories} languages={languages} />
             </div>
             <DrawerFooter className="safe-bottom flex-row gap-3">
               <Button
@@ -192,7 +189,6 @@ export function LibraryToolbar({ filters, onChange, onReset, categories, resultC
         <StatusSegments value={filters.status} onChange={(status) => onChange({ status })} />
         <OptionSelect aria-label={t.library.category} className="w-44" value={filters.category} onValueChange={(category) => onChange({ category })} options={o.category} />
         <OptionSelect aria-label={t.library.language} className="w-40" value={filters.language} onValueChange={(language) => onChange({ language })} options={o.language} />
-        <OptionSelect aria-label={t.library.owner} className="w-36" value={filters.owner} onValueChange={(owner) => onChange({ owner })} options={o.owner} />
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           {dirty && (
             <Button variant="ghost" className="text-accent-foreground" onClick={onReset}>

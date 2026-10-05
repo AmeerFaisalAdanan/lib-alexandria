@@ -53,7 +53,7 @@ export function EmptyState({
   );
 }
 
-/** Shown while persisted state is read from localStorage (a few ms), so pages never flash seed data. */
+/** Shown while the user's data loads, so pages never flash empty or stale content. */
 export function PageSkeleton() {
   return (
     <PageContainer>

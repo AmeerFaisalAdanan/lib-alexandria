@@ -15,20 +15,22 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { OwnerBadge, StatusBadge } from '@/components/books/badges';
+import { StatusBadge } from '@/components/books/badges';
 import { CollectionDialog } from '@/components/collections/collection-dialog';
 import { collectionDot } from '@/components/collections/collection-color';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DataGate } from '@/components/data-gate';
 import { EmptyState, PageContainer, PageSkeleton } from '@/components/page';
-import { useHydrated } from '@/components/store-hydrator';
 import { useT } from '@/i18n';
 import { DEFAULT_FILTERS, filterAndSortBooks } from '@/lib/library';
+import { useAction } from '@/lib/use-action';
 import { cn } from '@/lib/utils';
-import { useLibraryStore } from '@/store/library-store';
-import type { Book, Collection } from '@/types/library';
+import { useLibraryBooks, useLibraryStore } from '@/store/library-store';
+import type { Collection, LibraryBook } from '@/types/library';
 
-function AddBooksSheet({ collection, candidates }: { collection: Collection; candidates: Book[] }) {
+function AddBooksSheet({ collection, candidates }: { collection: Collection; candidates: LibraryBook[] }) {
   const { t } = useT();
+  const run = useAction();
   const addBookToCollection = useLibraryStore((s) => s.addBookToCollection);
   const [q, setQ] = useState('');
   const matches = filterAndSortBooks(candidates, { ...DEFAULT_FILTERS, q, sort: 'title' });
@@ -70,10 +72,12 @@ function AddBooksSheet({ collection, candidates }: { collection: Collection; can
                       variant="secondary"
                       className="h-11 shrink-0 md:h-9"
                       aria-label={t.collections.addBookTo(b.title)}
-                      onClick={() => {
-                        addBookToCollection(b.id, collection.id);
-                        toast.success(t.toast.addedToCollection(collection.name), { id: `add-${collection.id}` });
-                      }}
+                      onClick={() =>
+                        void run(
+                          () => addBookToCollection(b.id, collection.id),
+                          () => toast.success(t.toast.addedToCollection(collection.name), { id: `add-${collection.id}` }),
+                        )
+                      }
                     >
                       <Plus aria-hidden />
                     </Button>
@@ -89,10 +93,11 @@ function AddBooksSheet({ collection, candidates }: { collection: Collection; can
   );
 }
 
-function CollectionDetail({ collection, onLeave }: { collection: Collection; onLeave: () => void }) {
+function CollectionDetail({ collection, onLeave }: { collection: Collection; onLeave: (left: boolean) => void }) {
   const { t } = useT();
   const router = useRouter();
-  const books = useLibraryStore((s) => s.books);
+  const run = useAction();
+  const books = useLibraryBooks();
   const updateCollection = useLibraryStore((s) => s.updateCollection);
   const deleteCollection = useLibraryStore((s) => s.deleteCollection);
   const removeBookFromCollection = useLibraryStore((s) => s.removeBookFromCollection);
@@ -140,10 +145,12 @@ function CollectionDetail({ collection, onLeave }: { collection: Collection; onL
             collection={collection}
             open={dialog === 'rename'}
             onOpenChange={(open) => setDialog(open ? 'rename' : null)}
-            onSave={(values) => {
-              updateCollection(collection.id, values);
-              toast.success(t.toast.collectionRenamed);
-            }}
+            onSave={(values) =>
+              run(
+                () => updateCollection(collection.id, { ...values, description: values.description ?? null }),
+                () => toast.success(t.toast.collectionRenamed),
+              )
+            }
           />
           <ConfirmDialog
             open={dialog === 'delete'}
@@ -151,11 +158,16 @@ function CollectionDetail({ collection, onLeave }: { collection: Collection; onL
             title={t.collections.deleteTitle}
             description={t.collections.deleteBody}
             confirmLabel={t.collections.deleteConfirm}
-            onConfirm={() => {
-              onLeave();
-              router.replace('/collections');
-              deleteCollection(collection.id);
-              toast.success(t.toast.collectionDeleted);
+            onConfirm={async () => {
+              onLeave(true);
+              const deleted = await run(
+                () => deleteCollection(collection.id),
+                () => {
+                  router.replace('/collections');
+                  toast.success(t.toast.collectionDeleted);
+                },
+              );
+              if (!deleted) onLeave(false);
             }}
           />
         </div>
@@ -167,11 +179,10 @@ function CollectionDetail({ collection, onLeave }: { collection: Collection; onL
         <ul className="space-y-2">
           {members.map((b) => (
             <li key={b.id} className="flex items-center gap-2 rounded-2xl border border-border bg-card p-2 pl-4">
-              <Link href={`/library/${b.id}`} className="min-w-0 flex-1 py-2">
+              <Link href={`/library/${encodeURIComponent(b.id)}`} className="min-w-0 flex-1 py-2">
                 <p className="truncate font-bold hover:text-accent-foreground">{b.title}</p>
                 <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="truncate">{b.author}</span>
-                  <OwnerBadge owner={b.owner} />
                   <StatusBadge status={b.status} progress={b.progress} />
                 </div>
               </Link>
@@ -180,10 +191,12 @@ function CollectionDetail({ collection, onLeave }: { collection: Collection; onL
                 size="icon"
                 className="size-11 shrink-0 text-muted-foreground"
                 aria-label={t.collections.removeBook(b.title)}
-                onClick={() => {
-                  removeBookFromCollection(b.id, collection.id);
-                  toast(t.toast.removedFromCollection(collection.name));
-                }}
+                onClick={() =>
+                  void run(
+                    () => removeBookFromCollection(b.id, collection.id),
+                    () => toast(t.toast.removedFromCollection(collection.name)),
+                  )
+                }
               >
                 <X aria-hidden />
               </Button>
@@ -195,14 +208,13 @@ function CollectionDetail({ collection, onLeave }: { collection: Collection; onL
   );
 }
 
-export default function CollectionPage() {
+function CollectionRoute() {
   const { id } = useParams<{ id: string }>();
   const { t } = useT();
-  const hydrated = useHydrated();
   const collection = useLibraryStore((s) => s.collections.find((c) => c.id === id));
   const [leaving, setLeaving] = useState(false);
 
-  if (!hydrated || (leaving && !collection)) return <PageSkeleton />;
+  if (leaving && !collection) return <PageSkeleton />;
   if (!collection) {
     return (
       <PageContainer className="max-w-xl">
@@ -219,5 +231,13 @@ export default function CollectionPage() {
       </PageContainer>
     );
   }
-  return <CollectionDetail collection={collection} onLeave={() => setLeaving(true)} />;
+  return <CollectionDetail collection={collection} onLeave={setLeaving} />;
+}
+
+export default function CollectionPage() {
+  return (
+    <DataGate>
+      <CollectionRoute />
+    </DataGate>
+  );
 }

@@ -11,7 +11,7 @@ interface PreferencesState {
   setLibraryView: (view: LibraryView) => void;
 }
 
-// Kept separate from the library store so "Reset Demo Data" leaves preferences alone.
+// Device-level UI preferences only. User identity, books and collections live on the server.
 export const usePreferencesStore = create<PreferencesState>()(
   persist(
     (set) => ({
