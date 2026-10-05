@@ -1,0 +1,227 @@
+[
+  {
+    "id": "fx-0001",
+    "title": "Bidayah Al-Hidayah",
+    "author": "Imam Al-Ghazali",
+    "publisher": "Telaga Biru",
+    "publicationYear": 2020,
+    "language": "Bahasa Melayu",
+    "category": "Kitab Turath"
+  },
+  {
+    "id": "fx-0002",
+    "title": "Al-Fiqh Al-Manhaji (Jilid 1)",
+    "author": "Dr. Mustafa Al-Khin",
+    "publisher": "Pustaka Salam",
+    "publicationYear": 2018,
+    "language": "Bahasa Melayu",
+    "category": "Fiqh"
+  },
+  {
+    "id": "fx-0003",
+    "title": "Ihya Ulum Al-Din (Jilid 1)",
+    "author": "Imam Al-Ghazali",
+    "publisher": "Darul Fikir",
+    "publicationYear": 2015,
+    "language": "Bahasa Melayu",
+    "category": "Kitab Turath"
+  },
+  {
+    "id": "fx-0004",
+    "title": "The Incoherence of the Philosophers",
+    "author": "Imam Al-Ghazali",
+    "publisher": "Brigham Young University Press",
+    "publicationYear": 2002,
+    "language": "English",
+    "category": "Islamic Philosophy"
+  },
+  {
+    "id": "fx-0005",
+    "title": "Riyad As-Salihin",
+    "author": "Imam An-Nawawi",
+    "publisher": "Darussalam",
+    "publicationYear": 1999,
+    "language": "English",
+    "category": "Hadith"
+  },
+  {
+    "id": "fx-0006",
+    "title": "Ar-Raheeq Al-Makhtum (The Sealed Nectar)",
+    "author": "Safiur Rahman Mubarakpuri",
+    "isbn": "9789960899558",
+    "publisher": "Darussalam",
+    "publicationYear": 2002,
+    "language": "English",
+    "category": "Seerah"
+  },
+  {
+    "id": "fx-0007",
+    "title": "Al-Hikam",
+    "author": "Ibn 'Ata'illah As-Sakandari",
+    "publisher": "Pustaka Nasional",
+    "publicationYear": 2017,
+    "language": "Bahasa Melayu",
+    "category": "Kitab Turath"
+  },
+  {
+    "id": "fx-0008",
+    "title": "The Muqaddimah: An Introduction to History",
+    "author": "Ibn Khaldun",
+    "publisher": "Princeton University Press",
+    "publicationYear": 2015,
+    "language": "English",
+    "category": "History"
+  },
+  {
+    "id": "fx-0009",
+    "title": "Tafsir Al-Azhar (Jilid 1)",
+    "author": "Hamka",
+    "publisher": "PTS Publishing",
+    "publicationYear": 2019,
+    "language": "Bahasa Melayu",
+    "category": "Kitab Turath"
+  },
+  {
+    "id": "fx-0010",
+    "title": "Tenggelamnya Kapal Van der Wijck",
+    "author": "Hamka",
+    "publisher": "Gema Insani",
+    "publicationYear": 2017,
+    "language": "Bahasa Melayu",
+    "category": "Sastera Melayu"
+  },
+  {
+    "id": "fx-0011",
+    "title": "Salina",
+    "author": "A. Samad Said",
+    "publisher": "Dewan Bahasa dan Pustaka",
+    "publicationYear": 2013,
+    "language": "Bahasa Melayu",
+    "category": "Sastera Melayu"
+  },
+  {
+    "id": "fx-0012",
+    "title": "Ranjau Sepanjang Jalan",
+    "author": "Shahnon Ahmad",
+    "publisher": "Dewan Bahasa dan Pustaka",
+    "publicationYear": 2011,
+    "language": "Bahasa Melayu",
+    "category": "Sastera Melayu"
+  },
+  {
+    "id": "fx-0013",
+    "title": "Hikayat Hang Tuah",
+    "author": "Kassim Ahmad (ed.)",
+    "publisher": "Yayasan Karyawan",
+    "publicationYear": 2016,
+    "language": "Bahasa Melayu",
+    "category": "Sastera Melayu"
+  },
+  {
+    "id": "fx-0014",
+    "title": "Lost Islamic History",
+    "author": "Firas Alkhateeb",
+    "publisher": "Hurst",
+    "publicationYear": 2014,
+    "language": "English",
+    "category": "History"
+  },
+  {
+    "id": "fx-0015",
+    "title": "Reclaim Your Heart",
+    "author": "Yasmin Mogahed",
+    "publisher": "FB Publishing",
+    "publicationYear": 2012,
+    "language": "English",
+    "category": "Self-Development"
+  },
+  {
+    "id": "fx-0016",
+    "title": "Atomic Habits",
+    "author": "James Clear",
+    "isbn": "9780735211292",
+    "publisher": "Avery",
+    "publicationYear": 2018,
+    "language": "English",
+    "category": "Self-Development"
+  },
+  {
+    "id": "fx-0017",
+    "title": "Deep Work",
+    "author": "Cal Newport",
+    "isbn": "9781455586691",
+    "publisher": "Grand Central Publishing",
+    "publicationYear": 2016,
+    "language": "English",
+    "category": "Self-Development"
+  },
+  {
+    "id": "fx-0018",
+    "title": "Thinking, Fast and Slow",
+    "author": "Daniel Kahneman",
+    "isbn": "9780374533557",
+    "publisher": "Farrar, Straus and Giroux",
+    "publicationYear": 2013,
+    "language": "English",
+    "category": "General Non-fiction"
+  },
+  {
+    "id": "fx-0019",
+    "title": "Sapiens: A Brief History of Humankind",
+    "author": "Yuval Noah Harari",
+    "isbn": "9780062316097",
+    "publisher": "Harper",
+    "publicationYear": 2015,
+    "language": "English",
+    "category": "General Non-fiction"
+  },
+  {
+    "id": "fx-0020",
+    "title": "Clean Code: A Handbook of Agile Software Craftsmanship",
+    "author": "Robert C. Martin",
+    "isbn": "9780132350884",
+    "publisher": "Prentice Hall",
+    "publicationYear": 2008,
+    "language": "English",
+    "category": "Technology & Software"
+  },
+  {
+    "id": "fx-0021",
+    "title": "Designing Data-Intensive Applications",
+    "author": "Martin Kleppmann",
+    "isbn": "9781449373320",
+    "publisher": "O'Reilly Media",
+    "publicationYear": 2017,
+    "language": "English",
+    "category": "Technology & Software"
+  },
+  {
+    "id": "fx-0022",
+    "title": "The Pragmatic Programmer (20th Anniversary Edition)",
+    "author": "David Thomas & Andrew Hunt",
+    "isbn": "9780135957059",
+    "publisher": "Addison-Wesley",
+    "publicationYear": 2019,
+    "language": "English",
+    "category": "Technology & Software"
+  },
+  {
+    "id": "fx-0023",
+    "title": "Refactoring: Improving the Design of Existing Code",
+    "author": "Martin Fowler",
+    "isbn": "9780134757599",
+    "publisher": "Addison-Wesley",
+    "publicationYear": 2018,
+    "language": "English",
+    "category": "Technology & Software"
+  },
+  {
+    "id": "fx-0024",
+    "title": "Matan Abi Syuja’ (Al-Ghayah wat-Taqrib)",
+    "author": "Abu Syuja’ Al-Asfahani",
+    "publisher": "Telaga Biru",
+    "publicationYear": 2016,
+    "language": "Bahasa Melayu",
+    "category": "Fiqh"
+  }
+]
