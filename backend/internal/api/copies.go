@@ -51,7 +51,7 @@ func (s *server) createCopy(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "catalogue_unavailable", "the catalogue is temporarily unavailable", "")
 		return
 	}
-	if !found {
+	if !found || s.isHidden(r, req.BookID) {
 		writeError(w, http.StatusNotFound, "book_not_in_catalogue", "that book is not in the catalogue", "bookId")
 		return
 	}

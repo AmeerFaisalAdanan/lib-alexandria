@@ -143,6 +143,9 @@ func NormaliseISBN(raw string) string {
 	return strings.ToUpper(strings.NewReplacer("-", "", " ", "").Replace(strings.TrimSpace(raw)))
 }
 
+// TitleAuthorKey identifies a book by its title and author, ignoring case and spacing (for duplicate detection).
+func TitleAuthorKey(b Book) string { return fold(b.Title) + "|" + fold(b.Author) }
+
 func fold(s string) string { return strings.ToLower(strings.Join(strings.Fields(s), " ")) }
 
 // FindDuplicate returns an existing book with the same ISBN, or the same title and author.

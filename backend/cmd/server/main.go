@@ -16,6 +16,7 @@ import (
 	"libax/internal/auth"
 	"libax/internal/catalogue"
 	"libax/internal/config"
+	"libax/internal/health"
 	"libax/internal/lookup"
 	"libax/internal/store"
 )
@@ -46,8 +47,10 @@ func run(log *slog.Logger) error {
 		return err
 	}
 	defer db.Close()
+	db.BootstrapAdmins = cfg.AdminEmails
 
 	var src catalogue.Source
+	var sheetsPing func(context.Context) error
 	switch cfg.CatalogueSource {
 	case config.CatalogueFixture:
 		log.Warn("using the fixture catalogue (development only)")
@@ -61,12 +64,13 @@ func run(log *slog.Logger) error {
 		if err != nil {
 			return err
 		}
-		src = catalogue.SheetsSource{
+		sheets := catalogue.SheetsSource{
 			Client:        jwtCfg.Client(ctx),
 			SpreadsheetID: cfg.SheetsSpreadsheetID,
 			Range:         cfg.SheetsRange,
 			Log:           log,
 		}
+		src, sheetsPing = sheets, sheets.Ping
 	}
 	cat := catalogue.NewCache(src, cfg.CatalogueTTL, log, db.UpsertBooks)
 	var isbnLookup lookup.ISBNLookup
@@ -93,6 +97,7 @@ func run(log *slog.Logger) error {
 	}
 
 	var authenticator auth.Authenticator
+	var cloudflareProbe func(context.Context) error
 	switch cfg.AuthMode {
 	case config.AuthDev:
 		dev, err := auth.NewDev(cfg.Env, cfg.DevUserEmail)
@@ -102,21 +107,31 @@ func run(log *slog.Logger) error {
 		log.Warn("DEVELOPMENT AUTHENTICATION ENABLED: requests are trusted via X-Dev-User")
 		authenticator = dev
 	default:
-		authenticator = auth.NewCloudflare(cfg.CFIssuer(), cfg.CFAudience, nil)
+		cf := auth.NewCloudflare(cfg.CFIssuer(), cfg.CFAudience, nil)
+		authenticator, cloudflareProbe = cf, cf.Probe
 	}
 
-	provision := func(ctx context.Context, id auth.Identity) (auth.User, error) {
-		u, err := db.UpsertUser(ctx, id.Subject, id.Email, id.Name)
-		return auth.User{ID: u.ID, Email: u.Email, Name: u.Name}, err
+	// What the admin status page reports. Each entry says whether something is configured and, where a probe is
+	// cheap and read-only, whether it answers. Nothing here carries a secret.
+	services := []health.Service{
+		{Key: "postgres", Configured: true, Probe: db.Ping},
+		{Key: "catalogue", Configured: true, Detail: cfg.CatalogueSource, Probe: func(ctx context.Context) error { _, err := cat.ListBooks(ctx); return err }},
+		{Key: "googleSheets", Configured: cfg.CatalogueSource == config.CatalogueSheets, Detail: sourceDetail(cfg.CatalogueSource), Probe: sheetsPing},
+		{Key: "openLibrary", Configured: cfg.BookLookup == "online" || cfg.BookLookup == "", Detail: lookupDetail(cfg.BookLookup)},
+		{Key: "googleBooks", Configured: cfg.GoogleBooksAPIKey != "" && cfg.BookLookup != "off", Detail: lookupDetail(cfg.BookLookup)},
+		{Key: "coverScanner", Configured: cfg.CoverScanEnabled(), Detail: coverDetail(cfg.CoverScan)},
+		{Key: "cloudflareAccess", Configured: cfg.AuthMode == config.AuthCloudflare && cfg.CFTeamDomain != "" && cfg.CFAudience != "", Detail: authDetail(cfg.AuthMode), Probe: cloudflareProbe},
 	}
 
 	srv := &http.Server{
 		Addr: cfg.Addr,
 		Handler: api.NewRouter(api.Deps{
 			Store: db, Catalogue: cat, Log: log,
-			Auth: auth.Middleware(authenticator, provision, log), AuthMode: cfg.AuthMode,
+			Auth: auth.Middleware(authenticator, api.Provisioner(db), log), AuthMode: cfg.AuthMode,
 			Publisher: publisher, SubmissionLimit: cfg.SubmissionLimitPerDay,
 			ISBN: isbnLookup, Cover: coverReader, LookupLimit: cfg.LookupLimitPerDay, CoverScanLimit: cfg.CoverLimitPerDay,
+			Health: services,
+			Info:   api.SystemInfo{Env: cfg.Env, AuthMode: cfg.AuthMode, CatalogueSource: cfg.CatalogueSource, BookLookup: cfg.BookLookup, Submissions: cfg.CatalogueSubmissions},
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
@@ -141,4 +156,33 @@ func run(log *slog.Logger) error {
 		return srv.Shutdown(shutdown)
 	}
 	return nil
+}
+
+// The *Detail helpers describe a mode with a fixed word. They never include a value read from a secret.
+func sourceDetail(source string) string {
+	if source == config.CatalogueFixture {
+		return "fixture"
+	}
+	return ""
+}
+
+func lookupDetail(mode string) string {
+	if mode == "fixture" {
+		return "fixture"
+	}
+	return ""
+}
+
+func coverDetail(mode string) string {
+	if mode == "fixture" {
+		return "fixture"
+	}
+	return ""
+}
+
+func authDetail(mode string) string {
+	if mode == config.AuthDev {
+		return "development"
+	}
+	return ""
 }

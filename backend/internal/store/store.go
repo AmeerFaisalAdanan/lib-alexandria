@@ -22,9 +22,15 @@ var (
 	ErrConflict         = errors.New("already exists")
 	ErrOwnCopy          = errors.New("owners cannot borrow their own copy")
 	ErrNotOnLoan        = errors.New("copy is not on loan")
+	ErrLastAdmin        = errors.New("cannot remove the last active administrator")
 )
 
-type Store struct{ pool *pgxpool.Pool }
+type Store struct {
+	pool *pgxpool.Pool
+
+	// BootstrapAdmins are e-mail addresses (from ADMIN_EMAILS) allowed to become the first administrator.
+	BootstrapAdmins []string
+}
 
 func Open(ctx context.Context, databaseURL string) (*Store, error) {
 	pool, err := pgxpool.New(ctx, databaseURL)

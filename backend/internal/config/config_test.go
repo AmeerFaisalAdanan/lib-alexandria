@@ -88,3 +88,22 @@ func TestScanFixturesRefusedInProductionAndCoverScanNeedsAKey(t *testing.T) {
 		t.Error("off must be off even with a key")
 	}
 }
+
+func TestAdminEmailsAreParsedAndValidated(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://x")
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("AUTH_MODE", "dev")
+	t.Setenv("CATALOGUE_SOURCE", "fixture")
+	t.Setenv("ADMIN_EMAILS", " Ada@Example.test , ,grace@example.test ")
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.AdminEmails) != 2 || c.AdminEmails[0] != "ada@example.test" || c.AdminEmails[1] != "grace@example.test" {
+		t.Errorf("AdminEmails = %v", c.AdminEmails)
+	}
+	t.Setenv("ADMIN_EMAILS", "not-an-email")
+	if _, err := Load(); err == nil {
+		t.Error("a malformed ADMIN_EMAILS entry must be rejected at start-up")
+	}
+}

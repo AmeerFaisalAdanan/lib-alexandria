@@ -24,11 +24,22 @@ type Authenticator interface {
 }
 
 // User is the local account an Identity maps to.
+// User is the local account an Identity maps to. Role and Status always come from the database on every request
+// (never from the token or the client), so a role change or a disable takes effect immediately.
 type User struct {
-	ID    string
-	Email string
-	Name  string
+	ID     string
+	Email  string
+	Name   string
+	Role   string
+	Status string
 }
+
+const (
+	RoleAdmin    = "admin"
+	StatusActive = "active"
+)
+
+func (u User) IsAdmin() bool { return u.Role == RoleAdmin && u.Status == StatusActive }
 
 type ctxKey struct{}
 
@@ -60,9 +71,22 @@ func Middleware(a Authenticator, provision func(context.Context, Identity) (User
 				_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "internal", "message": "internal error"}})
 				return
 			}
+			// A disabled account is refused everywhere, including after logging in again: provisioning never
+			// re-activates anyone. Anything that is not explicitly "active" is treated as disabled.
+			if u.Status != StatusActive {
+				log.Info("request from a disabled account", "path", r.URL.Path)
+				writeForbidden(w, "account_disabled", "this account has been disabled")
+				return
+			}
 			next.ServeHTTP(w, r.WithContext(WithUser(r.Context(), u)))
 		})
 	}
+}
+
+func writeForbidden(w http.ResponseWriter, code, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusForbidden)
+	_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": code, "message": message}})
 }
 
 func writeUnauthorized(w http.ResponseWriter) {
