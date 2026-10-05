@@ -6,6 +6,8 @@ export function errorMessage(e: unknown, t: Dictionary): string {
   if (!(e instanceof ApiError)) return t.errors.generic;
   if (e.isNetwork) return t.errors.network;
   if (e.isUnauthorized) return t.errors.unauthorized;
+  if (e.code === 'account_disabled') return t.errors.accountDisabled;
+  if (e.code === 'last_admin') return t.errors.lastAdmin;
   if (e.isForbidden) return t.errors.forbidden;
   if (e.status === 404) return t.errors.notFound;
   if (e.code === 'on_loan') return t.errors.onLoan;

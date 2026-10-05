@@ -52,6 +52,8 @@ export interface Me {
   authMode: 'cloudflare' | 'dev';
   /** Whether members may publish new books to the shared catalogue. */
   canAddBooks: boolean;
+  role: 'member' | 'admin';
+  status: 'active' | 'disabled';
   /** Which scan-to-autofill options the server offers. */
   features: { isbnLookup: boolean; coverScan: boolean };
 }
@@ -97,4 +99,55 @@ export interface Copy {
   createdAt: string;
   /** The active loan, or null when the copy is available. */
   loan: Loan | null;
+}
+
+// ------------------------------------------------------------------ administration
+
+export type MemberRole = 'member' | 'admin';
+export type MemberStatus = 'active' | 'disabled';
+
+export interface Member {
+  id: string;
+  name?: string;
+  email: string;
+  role: MemberRole;
+  status: MemberStatus;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
+export type ServiceStatus = 'healthy' | 'unavailable' | 'not_configured' | 'configured';
+
+export interface ServiceResult {
+  key: string;
+  configured: boolean;
+  status: ServiceStatus;
+  /** A short fixed word such as "fixture" or "development"; never a secret. */
+  detail?: string;
+  latencyMs?: number;
+}
+
+export interface SystemStatus {
+  services: ServiceResult[];
+  environment: { env: string; authMode: string; catalogueSource: string; bookLookup: string; submissions: boolean };
+}
+
+export interface AuditEvent {
+  id: string;
+  actor?: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export type CatalogueIssue = 'missing_isbn' | 'possible_duplicate';
+
+export interface AdminBook extends Book {
+  hidden: boolean;
+  submittedBy?: string;
+  readers: number;
+  copies: number;
+  issues: CatalogueIssue[];
 }

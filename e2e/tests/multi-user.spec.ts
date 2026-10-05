@@ -11,6 +11,8 @@ test('two users: same book, independent state; neither sees the other’s librar
   await addFromCatalogue(a.page, TITLE);
   await a.page.goto('/library');
   await a.page.getByRole('link', { name: new RegExp(TITLE) }).click();
+  await a.page.waitForURL(/\/library\/(?!add)[^/]+$/); // the list also has a heading per book: wait for the detail page itself
+  await expect(a.page.getByRole('heading', { level: 1, name: TITLE })).toBeVisible();
   await a.page.getByRole('button', { name: 'Reading', exact: true }).click();
   await a.page.getByRole('button', { name: '50%', exact: true }).click();
   await a.page.getByRole('radio', { name: 'Rate 5 out of 5' }).click();
@@ -31,6 +33,8 @@ test('two users: same book, independent state; neither sees the other’s librar
   await addFromCatalogue(b.page, TITLE);
   await b.page.goto('/library');
   await b.page.getByRole('link', { name: new RegExp(TITLE) }).click();
+  await b.page.waitForURL(/\/library\/(?!add)[^/]+$/);
+  await expect(b.page.getByRole('heading', { level: 1, name: TITLE })).toBeVisible();
   await b.page.getByRole('button', { name: 'Completed', exact: true }).click();
   await expect(b.page.getByText('Book completed')).toBeVisible();
 

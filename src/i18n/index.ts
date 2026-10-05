@@ -14,11 +14,13 @@ export function useT() {
   return useMemo(() => {
     const currency = new Intl.NumberFormat(intlLocale[locale], { style: 'currency', currency: 'MYR' });
     const date = new Intl.DateTimeFormat(intlLocale[locale], { day: 'numeric', month: 'short', year: 'numeric' });
+    const dateTime = new Intl.DateTimeFormat(intlLocale[locale], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     return {
       locale,
       t: dictionaries[locale],
       formatPrice: (amount: number) => currency.format(amount),
       formatDate: (iso: string) => date.format(new Date(iso)),
+      formatDateTime: (iso: string) => dateTime.format(new Date(iso)),
     };
   }, [locale]);
 }

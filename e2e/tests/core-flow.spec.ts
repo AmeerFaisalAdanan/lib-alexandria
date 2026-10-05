@@ -22,7 +22,8 @@ test('core flow: browse catalogue → add → track → collect → everything p
   await page.goto('/library');
   await expect(page.getByText('1 book found')).toBeVisible();
   await page.getByRole('link', { name: new RegExp(TITLE) }).click();
-  await expect(page.getByRole('heading', { name: TITLE })).toBeVisible();
+  await page.waitForURL(/\/library\/(?!add)[^/]+$/);
+  await expect(page.getByRole('heading', { level: 1, name: TITLE })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Want to Read' })).toHaveAttribute('aria-pressed', 'true');
 
   // Status, progress, rating, tag, notes.
@@ -100,6 +101,7 @@ test('record a copy I own: price, location and purchase date', async ({ browser 
   await addFromCatalogue(page, TITLE);
   await page.goto('/library');
   await page.getByRole('link', { name: new RegExp(TITLE) }).click();
+  await page.waitForURL(/\/library\/(?!add)[^/]+$/);
 
   await page.getByRole('button', { name: 'I own a copy' }).click();
   await page.getByLabel('Location').fill('Study shelf');

@@ -20,7 +20,7 @@ import { api } from '@/lib/api';
 import { useLibraryStore } from '@/store/library-store';
 
 const m = vi.mocked(api, true);
-const me: Me = { id: 'u1', email: 'ada@example.com', authMode: 'dev', canAddBooks: true, features: { isbnLookup: true, coverScan: true } };
+const me: Me = { id: 'u1', email: 'ada@example.com', authMode: 'dev', canAddBooks: true, role: 'member', status: 'active', features: { isbnLookup: true, coverScan: true } };
 const entry = (over: Partial<LibraryEntry> = {}): LibraryEntry => ({
   id: 'bk-1', title: 'T', author: 'A', language: 'English', category: 'C',
   status: 'want_to_read', progress: 0, notes: '', tags: [], addedAt: '2026-01-01T00:00:00Z', ...over,

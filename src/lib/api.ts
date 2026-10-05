@@ -1,4 +1,4 @@
-import type { Book, BookInfo, Collection, CollectionColor, Copy, LibraryEntry, Me, Person, ReadingStatus, UserBook } from '@/types/library';
+import type { AdminBook, AuditEvent, Book, BookInfo, Collection, CollectionColor, Copy, LibraryEntry, Me, Member, MemberRole, MemberStatus, Person, ReadingStatus, SystemStatus, UserBook } from '@/types/library';
 import type { EntryPatch } from '@/lib/library';
 
 /** A failed API call. status 0 means the request never reached the server. */
@@ -21,6 +21,9 @@ export class ApiError extends Error {
   }
   get isForbidden() {
     return this.status === 403;
+  }
+  get isDisabled() {
+    return this.code === 'account_disabled';
   }
 }
 
@@ -131,6 +134,18 @@ export const api = {
   lookupIsbn: (isbn: string) => request<BookInfo>('GET', `/lookup/isbn/${encodeURIComponent(isbn)}`),
   /** Read a photo of a book cover (JPEG/PNG/WebP, up to 5 MB). 422 `unreadable` when no book is recognised. */
   readCover: (image: Blob) => request<BookInfo>('POST', '/lookup/cover', image),
+
+  // Administration. Every call is authorised by the server from the signed-in identity; the UI hiding these
+  // screens from members is a convenience, not the protection.
+  admin: {
+    listMembers: () => request<Member[]>('GET', '/admin/members'),
+    updateMember: (id: string, patch: { role?: MemberRole; status?: MemberStatus }) => request<Member>('PATCH', `/admin/members/${id}`, patch),
+    system: () => request<SystemStatus>('GET', '/admin/system'),
+    audit: (limit = 50) => request<AuditEvent[]>('GET', `/admin/audit?limit=${limit}`),
+    catalogue: () => request<AdminBook[]>('GET', '/admin/catalogue'),
+    setBookHidden: (bookId: string, hidden: boolean) =>
+      request<{ id: string; hidden: boolean }>('PATCH', `/admin/catalogue/${encodeURIComponent(bookId)}`, { hidden }),
+  },
 
   listUsers: () => request<Person[]>('GET', '/users'),
 
