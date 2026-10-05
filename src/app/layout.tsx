@@ -9,7 +9,7 @@ const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-sans' 
 
 export const metadata: Metadata = {
   title: 'Library of Alexandria',
-  description: 'Shared personal library of Alep & Taqim',
+  description: 'A shared book catalogue with your own reading tracker',
 };
 
 export const viewport: Viewport = {

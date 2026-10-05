@@ -7,31 +7,35 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { useT } from '@/i18n';
 import { isReadyToComplete } from '@/lib/library';
+import { useAction } from '@/lib/use-action';
 import { cn, sliderValue } from '@/lib/utils';
 import { useLibraryStore } from '@/store/library-store';
-import type { Book } from '@/types/library';
+import type { LibraryBook } from '@/types/library';
 
 const STEPS = [0, 25, 50, 75, 100];
 
 /** Progress slider + quick steps. Reaching 100% asks the reader to confirm completion. */
-export function ProgressControl({ book, compact = false }: { book: Book; compact?: boolean }) {
+export function ProgressControl({ book, compact = false }: { book: LibraryBook; compact?: boolean }) {
   const { t } = useT();
-  const updateProgress = useLibraryStore((s) => s.updateProgress);
-  const updateReadingStatus = useLibraryStore((s) => s.updateReadingStatus);
+  const run = useAction();
+  const updateEntry = useLibraryStore((s) => s.updateEntry);
   const [draft, setDraft] = useState<number | null>(null);
   const shown = draft ?? book.progress;
 
   const commit = (value: number) => {
     setDraft(null);
     if (value === book.progress) return;
-    updateProgress(book.id, value);
-    toast.success(t.toast.progressUpdated, { id: `progress-${book.id}` });
+    void run(
+      () => updateEntry(book.id, { progress: value }),
+      () => toast.success(t.toast.progressUpdated, { id: `progress-${book.id}` }),
+    );
   };
 
-  const complete = () => {
-    updateReadingStatus(book.id, 'completed');
-    toast.success(t.toast.bookCompleted);
-  };
+  const complete = () =>
+    void run(
+      () => updateEntry(book.id, { status: 'completed' }),
+      () => toast.success(t.toast.bookCompleted),
+    );
 
   return (
     <div className="space-y-3">

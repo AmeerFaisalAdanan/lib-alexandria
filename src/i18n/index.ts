@@ -23,4 +23,8 @@ export function useT() {
   }, [locale]);
 }
 
+/** Translated label for a catalogue language; unknown values (hand-entered in the sheet) show as written. */
+export const bookLanguageLabel = (t: Dictionary, language: string): string =>
+  (t.bookLanguage as Record<string, string>)[language] ?? language;
+
 export type { Dictionary };

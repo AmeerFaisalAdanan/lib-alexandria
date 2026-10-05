@@ -5,20 +5,24 @@ import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useT } from '@/i18n';
+import { normaliseTag } from '@/lib/library';
+import { useAction } from '@/lib/use-action';
 import { useLibraryStore } from '@/store/library-store';
-import type { Book } from '@/types/library';
+import type { LibraryBook } from '@/types/library';
 
-export function TagEditor({ book }: { book: Book }) {
+export function TagEditor({ book }: { book: LibraryBook }) {
   const { t } = useT();
-  const addTag = useLibraryStore((s) => s.addTag);
-  const removeTag = useLibraryStore((s) => s.removeTag);
+  const run = useAction();
+  const updateEntry = useLibraryStore((s) => s.updateEntry);
   const [draft, setDraft] = useState('');
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!draft.trim()) return;
-    addTag(book.id, draft);
+    const clean = normaliseTag(draft);
+    if (!clean) return;
     setDraft('');
+    if (book.tags.some((tag) => tag.toLowerCase() === clean.toLowerCase())) return;
+    void run(() => updateEntry(book.id, { tags: [...book.tags, clean] }));
   };
 
   return (
@@ -35,7 +39,7 @@ export function TagEditor({ book }: { book: Book }) {
               #{tag}
               <button
                 type="button"
-                onClick={() => removeTag(book.id, tag)}
+                onClick={() => void run(() => updateEntry(book.id, { tags: book.tags.filter((x) => x !== tag) }))}
                 aria-label={t.book.removeTag(tag)}
                 className="flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
               >

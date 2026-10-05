@@ -6,17 +6,19 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { CollectionDialog } from '@/components/collections/collection-dialog';
 import { collectionAccent } from '@/components/collections/collection-color';
-import { EmptyState, PageContainer, PageHeader, PageSkeleton } from '@/components/page';
-import { useHydrated } from '@/components/store-hydrator';
+import { DataGate } from '@/components/data-gate';
+import { EmptyState, PageContainer, PageHeader } from '@/components/page';
 import { useT } from '@/i18n';
+import { useAction } from '@/lib/use-action';
 import { cn } from '@/lib/utils';
-import { useLibraryStore } from '@/store/library-store';
+import { useLibraryBooks, useLibraryStore } from '@/store/library-store';
 
 function Collections() {
   const { t } = useT();
+  const run = useAction();
   const collections = useLibraryStore((s) => s.collections);
-  const books = useLibraryStore((s) => s.books);
-  const addCollection = useLibraryStore((s) => s.addCollection);
+  const books = useLibraryBooks();
+  const createCollection = useLibraryStore((s) => s.createCollection);
 
   const createButton = (
     <CollectionDialog
@@ -27,10 +29,7 @@ function Collections() {
           <span className="sr-only sm:hidden">{t.collections.newCollection}</span>
         </Button>
       }
-      onSave={(values) => {
-        addCollection(values);
-        toast.success(t.toast.collectionCreated);
-      }}
+      onSave={(values) => run(() => createCollection(values), () => toast.success(t.toast.collectionCreated))}
     />
   );
 
@@ -78,6 +77,9 @@ function Collections() {
 }
 
 export default function CollectionsPage() {
-  const hydrated = useHydrated();
-  return hydrated ? <Collections /> : <PageSkeleton />;
+  return (
+    <DataGate>
+      <Collections />
+    </DataGate>
+  );
 }

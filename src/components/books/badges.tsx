@@ -1,9 +1,9 @@
 'use client';
 
 import { BookOpen, CheckCircle2, Clock } from 'lucide-react';
-import { useT } from '@/i18n';
+import { bookLanguageLabel, useT } from '@/i18n';
 import { cn } from '@/lib/utils';
-import type { BookOwner, ReadingStatus } from '@/types/library';
+import type { ReadingStatus } from '@/types/library';
 
 const statusStyle: Record<ReadingStatus, { icon: typeof Clock; className: string }> = {
   want_to_read: { icon: Clock, className: 'bg-info/10 text-info border-info/20' },
@@ -29,30 +29,26 @@ export function StatusBadge({ status, progress, className }: { status: ReadingSt
   );
 }
 
-export const ownerTone: Record<BookOwner, string> = {
-  Alep: 'bg-primary/15 text-accent-foreground',
-  Taqim: 'bg-success/15 text-success',
-};
-
-export function OwnerBadge({ owner, className }: { owner: BookOwner; className?: string }) {
+export function LanguageBadge({ language, className }: { language: string; className?: string }) {
+  const { t } = useT();
   return (
-    <span className={cn('rounded-md px-2 py-0.5 text-xs font-bold whitespace-nowrap', ownerTone[owner], className)}>
-      {owner}
+    <span className={cn('rounded-md bg-secondary px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-muted-foreground', className)}>
+      {bookLanguageLabel(t, language)}
     </span>
   );
 }
 
-export function OwnerAvatar({ owner, className }: { owner: BookOwner; className?: string }) {
+/** Initial of the signed-in user, in a circle. */
+export function UserAvatar({ name, className }: { name: string; className?: string }) {
   return (
     <span
       aria-hidden
       className={cn(
-        'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-primary-foreground',
-        owner === 'Alep' ? 'bg-primary' : 'bg-success',
+        'flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground uppercase',
         className,
       )}
     >
-      {owner[0]}
+      {name.trim()[0] ?? '?'}
     </span>
   );
 }

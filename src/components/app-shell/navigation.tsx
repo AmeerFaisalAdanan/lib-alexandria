@@ -2,12 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Bookmark, Home, PlusCircle, Settings, type LucideIcon } from 'lucide-react';
+import { BookOpen, Bookmark, Handshake, Home, PlusCircle, Settings, type LucideIcon } from 'lucide-react';
 import { useT, type Dictionary } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { useLibraryStore } from '@/store/library-store';
-import { useHydrated } from '@/components/store-hydrator';
-import { OwnerAvatar } from '@/components/books/badges';
+import { UserAvatar } from '@/components/books/badges';
 import { LanguageToggle } from './language-toggle';
 
 interface NavItem {
@@ -25,9 +24,9 @@ const NAV: NavItem[] = [
     icon: BookOpen,
     label: (t) => t.nav.library,
     short: (t) => t.nav.libraryShort,
-    match: (p) => p.startsWith('/library') && p !== '/library/add',
+    match: (p) => p.startsWith('/library') && !p.startsWith('/library/add'),
   },
-  { href: '/library/add', icon: PlusCircle, label: (t) => t.nav.addBook, short: (t) => t.nav.add, match: (p) => p === '/library/add' },
+  { href: '/library/add', icon: PlusCircle, label: (t) => t.nav.addBook, short: (t) => t.nav.add, match: (p) => p.startsWith('/library/add') },
   {
     href: '/collections',
     icon: Bookmark,
@@ -35,13 +34,19 @@ const NAV: NavItem[] = [
     short: (t) => t.nav.collections,
     match: (p) => p.startsWith('/collections'),
   },
+  { href: '/lending', icon: Handshake, label: (t) => t.nav.lending, short: (t) => t.nav.lending, match: (p) => p.startsWith('/lending') },
   { href: '/settings', icon: Settings, label: (t) => t.nav.settings, short: (t) => t.nav.settings, match: (p) => p.startsWith('/settings') },
 ];
+
+/** Mobile bottom bar: five tabs with Home in the middle. Settings lives in the header on mobile. */
+const MOBILE_ORDER = ['/library', '/collections', '/', '/lending', '/library/add'];
+const MOBILE_NAV = MOBILE_ORDER.map((href) => NAV.find((n) => n.href === href)!);
+const SETTINGS = NAV.find((n) => n.href === '/settings')!;
 
 function Brand({ compact = false }: { compact?: boolean }) {
   const { t } = useT();
   return (
-    <Link href="/" className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+    <Link href="/" className={cn('flex items-center gap-3 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50', compact && '-my-1 min-h-11')}>
       <span
         aria-hidden
         className={cn(
@@ -64,8 +69,9 @@ function Brand({ compact = false }: { compact?: boolean }) {
 export function Navigation() {
   const pathname = usePathname();
   const { t } = useT();
-  const hydrated = useHydrated();
-  const bookCount = useLibraryStore((s) => s.books.length);
+  const ready = useLibraryStore((s) => s.status === 'ready');
+  const bookCount = useLibraryStore((s) => s.library.length);
+  const me = useLibraryStore((s) => s.me);
 
   return (
     <>
@@ -91,7 +97,7 @@ export function Navigation() {
               >
                 <item.icon className="size-4" aria-hidden />
                 <span className="flex-1">{item.label(t)}</span>
-                {item.href === '/library' && hydrated && (
+                {item.href === '/library' && ready && (
                   <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-muted-foreground tabular-nums">
                     {bookCount}
                   </span>
@@ -105,23 +111,35 @@ export function Navigation() {
             <span className="text-xs font-medium text-muted-foreground">{t.nav.language}</span>
             <LanguageToggle />
           </div>
-          <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/40 p-2">
-            <div className="flex -space-x-2">
-              <OwnerAvatar owner="Alep" className="ring-2 ring-background" />
-              <OwnerAvatar owner="Taqim" className="ring-2 ring-background" />
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-foreground">{t.common.keepers}</div>
-              <div className="text-[11px] text-muted-foreground">{t.common.keepersCaption}</div>
-            </div>
-          </div>
+          {me && (
+            <Link href="/settings" className="flex min-w-0 items-center gap-3 rounded-xl border border-border bg-secondary/40 p-2 transition hover:bg-secondary/70">
+              <UserAvatar name={me.name || me.email} />
+              <div className="min-w-0">
+                <div className="truncate text-xs font-semibold text-foreground">{me.name || me.email}</div>
+                {me.name && <div className="truncate text-[11px] text-muted-foreground">{me.email}</div>}
+              </div>
+            </Link>
+          )}
         </div>
       </aside>
 
       {/* Mobile header */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-card px-4 py-2 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border bg-card px-4 py-2 backdrop-blur md:hidden">
         <Brand compact />
-        <LanguageToggle />
+        <div className="flex items-center gap-2">
+          <LanguageToggle />
+          <Link
+            href={SETTINGS.href}
+            aria-label={SETTINGS.label(t)}
+            aria-current={SETTINGS.match(pathname) ? 'page' : undefined}
+            className={cn(
+              'flex size-11 items-center justify-center rounded-lg transition',
+              SETTINGS.match(pathname) ? 'bg-secondary text-accent-foreground' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <SETTINGS.icon className="size-5" aria-hidden />
+          </Link>
+        </div>
       </header>
 
       {/* Mobile bottom navigation */}
@@ -130,8 +148,9 @@ export function Navigation() {
         className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-lg md:hidden"
       >
         <div className="mx-auto grid max-w-md grid-cols-5">
-          {NAV.map((item) => {
+          {MOBILE_NAV.map((item) => {
             const active = item.match(pathname);
+            const home = item.href === '/';
             return (
               <Link
                 key={item.href}
@@ -142,7 +161,21 @@ export function Navigation() {
                   active ? 'font-bold text-accent-foreground' : 'text-muted-foreground',
                 )}
               >
-                <item.icon className="size-5" aria-hidden />
+                {/* Every tab has the same 20px icon slot so the labels line up; Home's round badge floats above it. */}
+                <span className="relative flex size-5 items-center justify-center">
+                  {home && (
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'absolute top-1/2 left-1/2 size-10 -translate-x-1/2 -translate-y-[62%] rounded-full border transition',
+                        active
+                          ? 'border-primary bg-primary shadow-md shadow-amber-500/30'
+                          : 'border-border bg-secondary',
+                      )}
+                    />
+                  )}
+                  <item.icon className={cn('relative size-5', home && active && 'text-primary-foreground')} aria-hidden />
+                </span>
                 <span className="w-full truncate text-[11px] leading-none">{item.short(t)}</span>
               </Link>
             );

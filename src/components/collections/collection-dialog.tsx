@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/i18n';
 import { cn } from '@/lib/utils';
-import type { NewCollection } from '@/store/library-store';
+import type { CollectionInput } from '@/lib/api';
 import type { Collection } from '@/types/library';
 import { COLLECTION_COLORS, collectionDot } from './collection-color';
 
@@ -18,7 +18,8 @@ interface CollectionDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   collection?: Collection;
-  onSave: (values: NewCollection) => void;
+  /** Resolves true when saved; the dialog stays open (keeping the user's input) on false. */
+  onSave: (values: CollectionInput) => Promise<boolean> | boolean | void;
 }
 
 /** Create (no `collection`) or rename/edit an existing collection. */
@@ -45,11 +46,11 @@ export function CollectionDialog({ trigger, collection, onSave, ...controlled }:
       <DialogContent>
         <form
           noValidate
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             if (!name.trim()) return setError(true);
-            onSave({ name: name.trim(), description: description.trim() || undefined, color });
-            setOpen(false);
+            const saved = await onSave({ name: name.trim(), description: description.trim() || undefined, color });
+            if (saved !== false) setOpen(false);
           }}
           className="space-y-5"
         >
